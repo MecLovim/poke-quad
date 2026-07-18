@@ -29,10 +29,10 @@ Na página que abrir, baixe o arquivo do seu sistema:
 
 | Sistema | Arquivo |
 |---|---|
-| Windows | `Poke Quad Setup x.x.x.exe` |
-| macOS (Intel) | `Poke Quad-x.x.x-x64.dmg` |
-| macOS (Apple Silicon) | `Poke Quad-x.x.x-arm64.dmg` |
-| Linux | `Poke Quad-x.x.x.AppImage` |
+| Windows | `Poke-Quad-Setup-x.x.x.exe` |
+| macOS (Intel) | `Poke-Quad-x.x.x-x64.dmg` |
+| macOS (Apple Silicon) | `Poke-Quad-x.x.x-arm64.dmg` |
+| Linux | `Poke-Quad-x.x.x.AppImage` |
 
 Não precisa instalar nada além disso — nada de npm, Node ou código.
 
@@ -40,7 +40,7 @@ Não precisa instalar nada além disso — nada de npm, Node ou código.
 
 Depois de baixar:
 
-- **Windows**: rode o `Poke Quad Setup x.x.x.exe`, escolha a pasta e conclua.
+- **Windows**: rode o `Poke-Quad-Setup-x.x.x.exe`, escolha a pasta e conclua.
   Um atalho é criado na área de trabalho.
 - **macOS**: abra o `.dmg` (x64 para Intel, arm64 para Apple Silicon) e
   arraste o app para a pasta Aplicativos.
