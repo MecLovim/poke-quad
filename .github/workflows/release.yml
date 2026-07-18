@@ -30,3 +30,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+  # Deixa nos assets só os instaladores (os .yml e .blockmap servem apenas
+  # para auto-update, que o app não usa) e tira a Release do modo rascunho.
+  publicar:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remover metadados e publicar a Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for asset in $(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name | select(endswith(".yml") or endswith(".blockmap"))'); do
+            gh release delete-asset "$GITHUB_REF_NAME" "$asset" --repo "$GITHUB_REPOSITORY" --yes
+          done
+          gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false --latest
