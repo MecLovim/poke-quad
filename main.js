@@ -1,10 +1,20 @@
-const { app, BrowserWindow, ipcMain, session, dialog, safeStorage } = require('electron');
+const { app, BrowserWindow, ipcMain, session, dialog, safeStorage, powerSaveBlocker } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
 const PARTITIONS = ['persist:slot1', 'persist:slot2', 'persist:slot3', 'persist:slot4'];
 
+// O Chromium congela timers, requestAnimationFrame e prioridade de processo
+// quando a janela perde o foco ou fica coberta por outra (alt+tab, minimizar).
+// Num jogo idle isso trava o progresso e dessincroniza o servidor, então todas
+// as formas de throttling em segundo plano ficam desligadas.
+app.commandLine.appendSwitch('disable-background-timer-throttling');
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
+
 let win = null;
+let powerBlockerId = null;
 
 function acceptedFile() {
   return path.join(app.getPath('userData'), 'accepted.json');
@@ -23,10 +33,12 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       webviewTag: true,
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      backgroundThrottling: false
     }
   });
 
+  win.webContents.setBackgroundThrottling(false);
   win.loadFile('index.html');
   win.on('closed', () => {
     win = null;
@@ -39,6 +51,10 @@ app.setAppUserModelId('com.pokequad.app');
 // que sem isso nunca receberia a tecla enquanto o jogo estiver focado.
 app.on('web-contents-created', (event, contents) => {
   if (contents.getType() === 'webview') {
+    // Reforça o desligamento do throttling: o atributo no <webview> vale para a
+    // criação, isto garante o mesmo para qualquer conteúdo criado depois.
+    contents.setBackgroundThrottling(false);
+
     contents.on('before-input-event', (e, input) => {
       if (input.type === 'keyDown' && input.key === 'Escape' && win && !win.isDestroyed()) {
         win.webContents.send('esc-pressed');
@@ -48,9 +64,22 @@ app.on('web-contents-created', (event, contents) => {
 });
 
 app.whenReady().then(() => {
+  const gamePreload = path.join(__dirname, 'game-preload.js');
   for (const name of PARTITIONS) {
-    session.fromPartition(name);
+    const s = session.fromPartition(name);
+    // registerPreloadScript chegou no Electron 35; setPreloads é o equivalente
+    // nas versões anteriores. Mantém os dois para o app não quebrar no upgrade.
+    if (typeof s.registerPreloadScript === 'function') {
+      s.registerPreloadScript({ id: 'poke-quad-keepalive', type: 'frame', filePath: gamePreload });
+    } else {
+      s.setPreloads([gamePreload]);
+    }
   }
+
+  // Impede que o sistema suspenda enquanto o app está aberto (a tela ainda pode
+  // desligar normalmente).
+  powerBlockerId = powerSaveBlocker.start('prevent-app-suspension');
+
   createWindow();
 
   app.on('activate', () => {
@@ -60,6 +89,12 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
+});
+
+app.on('will-quit', () => {
+  if (powerBlockerId !== null && powerSaveBlocker.isStarted(powerBlockerId)) {
+    powerSaveBlocker.stop(powerBlockerId);
+  }
 });
 
 ipcMain.on('window:minimize', () => {

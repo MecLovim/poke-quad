@@ -1,7 +1,7 @@
 {
   "name": "poke-quad",
   "productName": "Poke Quad",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Quatro navegadores independentes em grid 2x2 para jogar quatro contas de Poke Idle World ao mesmo tempo.",
   "main": "main.js",
   "author": "Poke Quad contributors",
@@ -26,6 +26,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "game-preload.js",
       "index.html",
       "renderer.js",
       "build/icon.png"
@@ -46,7 +47,10 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "icon": "build/icon.png",
