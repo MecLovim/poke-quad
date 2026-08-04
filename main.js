@@ -63,16 +63,39 @@ app.on('web-contents-created', (event, contents) => {
   }
 });
 
+// Módulos do assistente (JustPokedex-equivalente), injetados na página do jogo em
+// cada uma das 4 sessões junto com o keepalive acima. A ordem importa: cada arquivo
+// depende de window.__PQA já ter sido montado pelos anteriores (ver assistant/core.js
+// e o guard "core ausente" no topo de cada módulo seguinte).
+const ASSISTANT_MODULES = [
+  'core.js',
+  'data-types.js',
+  'panel-chrome.js',
+  'reader.js',
+  'shiny.js',
+  'combat.js',
+  'catch-analyzer.js',
+  'pokepedia.js',
+  'misc.js'
+];
+
 app.whenReady().then(() => {
   const gamePreload = path.join(__dirname, 'game-preload.js');
+  const assistantDir = path.join(__dirname, 'assistant');
+  const preloadFiles = [gamePreload, ...ASSISTANT_MODULES.map((f) => path.join(assistantDir, f))];
+
   for (const name of PARTITIONS) {
     const s = session.fromPartition(name);
     // registerPreloadScript chegou no Electron 35; setPreloads é o equivalente
     // nas versões anteriores. Mantém os dois para o app não quebrar no upgrade.
+    // Ambos preservam a ordem da lista, o que é essencial aqui.
     if (typeof s.registerPreloadScript === 'function') {
-      s.registerPreloadScript({ id: 'poke-quad-keepalive', type: 'frame', filePath: gamePreload });
+      preloadFiles.forEach((filePath, i) => {
+        const id = `poke-quad-${i}-${path.basename(filePath, '.js')}`;
+        s.registerPreloadScript({ id, type: 'frame', filePath });
+      });
     } else {
-      s.setPreloads([gamePreload]);
+      s.setPreloads(preloadFiles);
     }
   }
 

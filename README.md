@@ -21,6 +21,30 @@ própria (cookies e localStorage separados): dá para manter quatro contas de
 [Poke Idle World](https://poke.idleworld.online) logadas ao mesmo tempo, sem
 que uma derrube a outra. Os logins ficam salvos entre uma execução e outra.
 
+## Assistente por conta
+
+Cada um dos quatro painéis tem um assistente embutido — abre e fecha com
+**Alt+P** dentro daquela conta, independente dos outros três. Ele só lê dados
+que já passam pela conexão do jogo: nenhuma aba compra, vende ou move item
+por fora da tela do próprio jogo.
+
+- **Resumo** — Pokémon em foco, shinies encontrados, capturas registradas
+- **Pokémon** — passe o mouse num Pokémon do inventário e ele estima os 6 IVs,
+  potencial (%) e poder, com link para simular a rota no PIW Tools
+- **Comparar** — fixa um Pokémon e compara IV a IV com o próximo que você analisar
+- **Shiny** — detecta shinies pelo dado que o próprio servidor envia, com
+  alerta sonoro, banner e histórico
+- **Combate** — golpes do Pokémon que você está caçando e quanto dano cada um
+  está causando ou recebendo
+- **Capturas** — taxa de sucesso por espécie/bola com intervalo de confiança
+  estatístico (Wilson), sequências de erro, exportação em CSV/JSON
+- **Poképédia** — busca de item com as fontes de drop e a chance de cada uma
+- **Avisos** — lembrete de presente diário e filtro por raridade/IV no log de
+  captura nativo do jogo
+
+Cada conta mantém seu próprio histórico e configuração — nada é compartilhado
+entre os quatro slots.
+
 ## Download
 
 **[⬇ Baixar a versão mais recente](https://github.com/meclovim/poke-quad/releases/latest)**
@@ -85,3 +109,20 @@ Outros arquivos na pasta acima de `Partitions`:
   Com eles salvos, o app preenche usuário e senha sozinho quando a tela de
   login abre — só a caixa "confirme que é humano" continua manual. Para
   remover, use "Apagar salvos" no próprio formulário ou apague o arquivo.
+
+## Créditos
+
+O assistente por conta (seção acima) foi inspirado no
+[JustPokedex](https://github.com/guilherme-se/justpokedex), um userscript de
+[guilherme-se](https://github.com/guilherme-se) para o mesmo jogo. Ele foi o
+primeiro a documentar, por engenharia reversa, boa parte de como o jogo se
+comunica com o cliente, e mostrou que esse tipo de assistente era possível.
+
+Nenhuma linha de código do JustPokedex foi copiada para o Poke Quad — o
+assistente foi escrito do zero, porque o repositório original não define uma
+licença de código aberto, e reimplementar de forma independente (conferindo
+cada fórmula e comportamento de novo contra o jogo real) foi a forma de dar
+continuidade à ideia sem depender de permissão explícita de redistribuição.
+
+Se você é o autor do JustPokedex e quiser que esta seção diga algo diferente,
+abra uma issue.
