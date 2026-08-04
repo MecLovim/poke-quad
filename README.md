@@ -30,7 +30,9 @@ por fora da tela do próprio jogo.
 
 - **Resumo** — Pokémon em foco, shinies encontrados, capturas registradas
 - **Pokémon** — passe o mouse num Pokémon do inventário e ele estima os 6 IVs,
-  potencial (%) e poder, com link para simular a rota no PIW Tools
+  tipo, poder e duas notas: Avaliação Geral (IV + Qualidade, ponderada do jeito
+  que o próprio jogo documenta que pesa — Qualidade quase o dobro do IV) e
+  Potencial de IV isolado, além de link para simular a rota no PIW Tools
 - **Comparar** — fixa um Pokémon e compara IV a IV com o próximo que você analisar
 - **Shiny** — detecta shinies pelo dado que o próprio servidor envia, com
   alerta sonoro, banner e histórico

@@ -45,9 +45,13 @@ function iniciarTabelaDeTipos() {
   };
 
   // O jogo mostra os tipos em português (tooltip do inventário); mapeia rótulo
-  // pt-BR -> chave interna usada em CHART/COLORS.
+  // pt-BR -> chave interna usada em CHART/COLORS. Também serve de tabela geral de
+  // apelidos: "neutral" é como /game/creatures.json rotula golpes tipo Normal
+  // (confirmado ao vivo: Swords Dance, Growl etc. — todos Normal nos jogos oficiais,
+  // só 8 de 3549 golpes usam esse rótulo) — sem isso, esses golpes apareciam sem
+  // tradução nem cor na aba Combate.
   const PT_TO_KEY = {
-    normal: 'normal', fogo: 'fire', água: 'water', agua: 'water', elétrico: 'electric',
+    normal: 'normal', neutral: 'normal', fogo: 'fire', água: 'water', agua: 'water', elétrico: 'electric',
     eletrico: 'electric', grama: 'grass', planta: 'grass', gelo: 'ice', lutador: 'fighting',
     veneno: 'poison', terra: 'ground', voador: 'flying', psíquico: 'psychic',
     psiquico: 'psychic', inseto: 'bug', pedra: 'rock', rocha: 'rock', fantasma: 'ghost',

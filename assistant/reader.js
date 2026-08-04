@@ -184,7 +184,9 @@ function iniciarLeitor() {
     const fator = (nivel / 100) * Math.pow(qualidade, expoente);
     if (!Number.isFinite(fator) || fator <= 0) return 0;
     const ivFloat = ((statAtual / fator) - base) / 2;
-    return Math.min(MAX_IV_INDIVIDUAL, Math.max(0, ivFloat));
+    // A própria wiki do jogo documenta growth (IV) como 1..32 por stat, não 0..32
+    // (poke.idleworld.online/pokepedia/systems/quality) — o piso do clamp é 1.
+    return Math.min(MAX_IV_INDIVIDUAL, Math.max(1, ivFloat));
   }
 
   function calcularIVsIndividuais(stats, base, nivel, qualidade) {
@@ -244,6 +246,33 @@ function iniciarLeitor() {
     return { label: 'Divina', color: '#00bcd4' };
   }
 
+  // IV (genética) e Qualidade (raridade da captura) são rolagens independentes
+  // no jogo — dá pra ter os dois extremos ao mesmo tempo. O "Potencial de IV"
+  // continua medindo só a genética (por design, ver calcularPotencial), mas
+  // sozinho isso engana: um IV excepcional com Qualidade fraca não é um Pokémon
+  // "muito bom" de verdade. A Avaliação Geral existe pra responder essa pergunta,
+  // combinando os dois — sem substituir o Potencial de IV, que continua útil por
+  // si só (ex.: pra saber se vale criar/passar os IVs adiante).
+  const ORDEM_QUALIDADE = ['Fraca', 'Comum', 'Incomum', 'Rara', 'Épica', 'Lendária', 'Mítica', 'Anciã', 'Divina'];
+
+  function calcularScoreQualidade(qualidade) {
+    const tier = classificarQualidade(qualidade);
+    const posicao = ORDEM_QUALIDADE.indexOf(tier.label);
+    const indice = posicao >= 0 ? posicao : 0;
+    return ((indice + 1) / ORDEM_QUALIDADE.length) * 100;
+  }
+
+  // A wiki oficial do jogo (poke.idleworld.online/pokepedia/systems/power) diz
+  // literalmente: "a Qualidade pesa quase o dobro do IV" no resultado final, e
+  // avisa contra multiplicar "tier × IV" (o "mito do Tier × IV"). Por isso a
+  // combinação aqui é uma média ponderada 1/3 IV : 2/3 Qualidade — não 50/50 —
+  // pra bater com o que o próprio jogo diz que pesa mais.
+  function calcularAvaliacaoGeral(potencialIV, qualidade) {
+    const scoreQualidade = calcularScoreQualidade(qualidade);
+    const combinado = (potencialIV * (1 / 3)) + (scoreQualidade * (2 / 3));
+    return Math.min(100, Math.max(0, combinado));
+  }
+
   function construirLinkPIW(pokemon) {
     const s = pokemon.stats;
     const params = new URLSearchParams({
@@ -275,15 +304,17 @@ function iniciarLeitor() {
       ? calcularIVsIndividuais(pokemon.stats, base.base, nivel, qualidade)
       : { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, vel: 0 };
 
+    const potencial = calcularPotencial(ivsIndividuais, pokemon.ivAtual);
+
     return {
       pokemon,
       base: base.base,
       spriteId: base.spriteId,
       ivsIndividuais,
       ivTotal: calcularIVTotal(ivsIndividuais, pokemon.ivAtual),
-      potencial: calcularPotencial(ivsIndividuais, pokemon.ivAtual),
-      poderEstimado: temStatsCompletos ? calcularPoderEstimado(base.base, ivsIndividuais, nivel, qualidade) : null,
-      avisoNivelBaixo: nivel < 15
+      potencial,
+      avaliacaoGeral: calcularAvaliacaoGeral(potencial, qualidade),
+      poderEstimado: temStatsCompletos ? calcularPoderEstimado(base.base, ivsIndividuais, nivel, qualidade) : null
     };
   }
 
@@ -411,7 +442,7 @@ function iniciarLeitor() {
       return;
     }
 
-    const { pokemon, ivsIndividuais, ivTotal, potencial, poderEstimado, avisoNivelBaixo, spriteId } = analise;
+    const { pokemon, ivsIndividuais, ivTotal, potencial, avaliacaoGeral, poderEstimado, spriteId } = analise;
     const isShiny = /shiny/i.test(pokemon.nome);
     const sprite = spriteUrl(spriteId, isShiny);
     const tierQualidade = classificarQualidade(pokemon.qualidade);
@@ -436,6 +467,7 @@ function iniciarLeitor() {
     }
 
     const tierPotencial = classificarPotencial(potencial);
+    const tierAvaliacao = classificarPotencial(avaliacaoGeral);
 
     alvo.innerHTML = `
       <div class="pqa-reader-header">
@@ -446,9 +478,19 @@ function iniciarLeitor() {
           ${tiposBadgesHtml(pokemon.tipos)}
         </div>
       </div>
-      ${avisoNivelBaixo ? '<div class="pqa-warning">Nível abaixo de 15: o cálculo de IV pode não ser preciso.</div>' : ''}
-      <div class="pqa-potential-badge" style="border-color:${tierPotencial.color};color:${tierPotencial.color}">
-        Potencial: ${potencial.toFixed(1)}% — ${tierPotencial.label} · IV total ${ivTotal}/${MAX_IV_TOTAL}
+      <div class="pqa-badges-row">
+        <div class="pqa-potential-badge" style="border-color:${tierAvaliacao.color};color:${tierAvaliacao.color}">
+          Avaliação Geral: ${avaliacaoGeral.toFixed(1)}% — ${tierAvaliacao.label}
+        </div>
+        <div class="pqa-potential-badge pqa-badge-secundario" style="border-color:${tierPotencial.color};color:${tierPotencial.color}">
+          Potencial de IV: ${potencial.toFixed(1)}% — ${tierPotencial.label} · IV total ${ivTotal}/${MAX_IV_TOTAL}
+        </div>
+      </div>
+      <div class="pqa-empty-hint">
+        Avaliação Geral pesa Qualidade quase o dobro do IV (como o próprio jogo
+        documenta em Pokepédia → Sistemas → Power) — um IV excelente com Qualidade
+        fraca não é um Pokémon muito bom de verdade. Potencial de IV é só a
+        genética, útil pra saber se vale criar/evoluir mesmo com Qualidade baixa.
       </div>
       <div class="pqa-power-row">
         Poder: ${pokemon.poder ?? '—'}${poderEstimado ? ` <span class="pqa-power-est">(estimado: ${poderEstimado})</span>` : ''}
@@ -524,6 +566,7 @@ function iniciarLeitor() {
       ${linha('Vel', a.ivsIndividuais.vel, b.ivsIndividuais.vel)}
       ${linha('IV total', a.ivTotal, b.ivTotal)}
       ${linha('Potencial %', a.potencial, b.potencial)}
+      ${linha('Avaliação Geral', a.avaliacaoGeral, b.avaliacaoGeral)}
       <div class="pqa-reader-actions">
         <button id="pqa-btn-desfixar" class="pqa-action-btn">Remover fixado</button>
         <button id="pqa-btn-refixar" class="pqa-action-btn">📌 Fixar o atual</button>
@@ -572,8 +615,8 @@ function iniciarLeitor() {
               ivsIndividuais: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, vel: 0 },
               ivTotal: 0,
               potencial: 0,
-              poderEstimado: null,
-              avisoNivelBaixo: false
+              avaliacaoGeral: 0,
+              poderEstimado: null
             });
           });
         });
@@ -632,24 +675,17 @@ function iniciarLeitor() {
       padding: 2px 7px;
       border-radius: 4px;
     }
-    .pqa-warning {
-      background: rgba(241,198,68,0.12);
-      border: 1px solid rgba(241,198,68,0.4);
-      color: #f1c644;
-      border-radius: 5px;
-      padding: 5px 8px;
-      font-size: 10px;
-      margin-bottom: 8px;
-    }
+    .pqa-badges-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 6px; }
     .pqa-potential-badge {
       display: inline-block;
       border: 1px solid;
       border-radius: 5px;
       padding: 3px 8px;
       font-size: 11px;
-      margin-bottom: 8px;
+      font-weight: 600;
     }
-    .pqa-power-row { font-size: 11px; margin-bottom: 8px; }
+    .pqa-badge-secundario { font-weight: 400; opacity: 0.85; }
+    .pqa-power-row { font-size: 11px; margin: 8px 0; }
     .pqa-power-est { color: #8b9bad; }
     .pqa-stats { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
     .pqa-stat-row { display: grid; grid-template-columns: 30px minmax(28px, auto) 1fr 34px; align-items: center; gap: 6px; font-size: 10px; }
@@ -716,6 +752,8 @@ function iniciarLeitor() {
     calcularStat,
     estimarIVIndividual,
     calcularPotencial,
+    calcularScoreQualidade,
+    calcularAvaliacaoGeral,
     classificarPotencial,
     classificarIVIndividual,
     classificarQualidade,
